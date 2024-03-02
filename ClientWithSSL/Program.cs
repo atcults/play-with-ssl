@@ -14,7 +14,7 @@ namespace ClientWithSSL
             var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser);
             store.Open(OpenFlags.ReadOnly);
             var certificate = store.Certificates.OfType<X509Certificate2>()
-                .First(c => c.FriendlyName == "Ivan Yakimov Test-only Certificate For Client Authorization");
+                .First(c => c.FriendlyName == "Test-only Certificate For Client Authorization");
 
             //var certificate = new X509Certificate2(
             //    @"certificateForClientAuthorization.pfx",
