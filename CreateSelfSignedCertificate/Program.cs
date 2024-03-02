@@ -3,7 +3,6 @@ using System.IO;
 using System.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks;
 
 namespace CreateSelfSignedCertificate
 {
@@ -78,7 +77,7 @@ namespace CreateSelfSignedCertificate
                 X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet
             ).CopyWithPrivateKey(rsaKey);
 
-            exportableCertificate.FriendlyName = "Ivan Yakimov Test-only Certificate For Server Authorization";
+            exportableCertificate.FriendlyName = "Test-only Certificate For Server Authorization";
 
             // Create password for certificate protection
             var passwordForCertificateProtection = new SecureString();
@@ -108,7 +107,7 @@ namespace CreateSelfSignedCertificate
                 var rsaKey = RSA.Create(2048);
 
                 // Describe certificate
-                string subject = "CN=Ivan Yakimov";
+                string subject = "CN=localhost";
 
                 // Create certificate request
                 var certificateRequest = new CertificateRequest(
@@ -154,7 +153,7 @@ namespace CreateSelfSignedCertificate
                     X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet
                 ).CopyWithPrivateKey(rsaKey);
 
-                exportableCertificate.FriendlyName = "Ivan Yakimov Test-only Certificate For Client Authorization";
+                exportableCertificate.FriendlyName = "Test-only Certificate For Client Authorization";
 
                 // Create password for certificate protection
                 var passwordForCertificateProtection = new SecureString();
