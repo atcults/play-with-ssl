@@ -10,12 +10,15 @@ namespace CreateSelfSignedCertificate
     {
         static void Main()
         {
-            CreateCertificateForServerAuthentication();
+            var serverCert = CreateCertificateForServerAuthentication();
 
-            CreateCertificateForClientAuthentication();
+            var clientCert = CreateCertificateForClientAuthentication();
+
+            StoreCertificate(serverCert, StoreName.Root, StoreLocation.CurrentUser);
+            StoreCertificate(clientCert, StoreName.Root, StoreLocation.CurrentUser);
         }
 
-        private static void CreateCertificateForServerAuthentication()
+        private static X509Certificate2 CreateCertificateForServerAuthentication()
         {
             // Generate private-public key pair
             var rsaKey = RSA.Create(2048);
@@ -42,7 +45,7 @@ namespace CreateSelfSignedCertificate
 
             certificateRequest.CertificateExtensions.Add(
                 new X509KeyUsageExtension(
-                    keyUsages: 
+                    keyUsages:
                         X509KeyUsageFlags.DigitalSignature
                         | X509KeyUsageFlags.KeyEncipherment,
                     critical: false
@@ -71,13 +74,6 @@ namespace CreateSelfSignedCertificate
             var certificate = certificateRequest.CreateSelfSigned(DateTimeOffset.Now, expireAt);
 
             // Export certificate with private key
-            var exportableCertificate = new X509Certificate2(
-                certificate.Export(X509ContentType.Cert),
-                (string)null,
-                X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet
-            ).CopyWithPrivateKey(rsaKey);
-
-            exportableCertificate.FriendlyName = "Test-only Certificate For Server Authorization";
 
             // Create password for certificate protection
             var passwordForCertificateProtection = new SecureString();
@@ -85,6 +81,14 @@ namespace CreateSelfSignedCertificate
             {
                 passwordForCertificateProtection.AppendChar(@char);
             }
+
+            // Inside CreateCertificateForServerAuthentication after creating the self-signed certificate
+            var exportableCertificate = new X509Certificate2(
+                certificate.Export(X509ContentType.Pfx, passwordForCertificateProtection),
+                passwordForCertificateProtection,
+                X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet
+            );
+            exportableCertificate.FriendlyName = "Test-only Certificate For Server Authorization";
 
             // Export certificate to a file.
             File.WriteAllBytes(
@@ -98,83 +102,95 @@ namespace CreateSelfSignedCertificate
             // Test correctness of export
             var loadedCertificate = new X509Certificate2("certificateForServerAuthorization.pfx", passwordForCertificateProtection);
 
-            Console.WriteLine(loadedCertificate.FriendlyName);
+            return exportableCertificate;
         }
 
-        private static void CreateCertificateForClientAuthentication()
+        private static X509Certificate2 CreateCertificateForClientAuthentication()
         {
-                // Generate private-public key pair
-                var rsaKey = RSA.Create(2048);
+            // Generate private-public key pair
+            var rsaKey = RSA.Create(2048);
 
-                // Describe certificate
-                string subject = "CN=localhost";
+            // Describe certificate
+            string subject = "CN=localhost";
 
-                // Create certificate request
-                var certificateRequest = new CertificateRequest(
-                    subject,
-                    rsaKey,
-                    HashAlgorithmName.SHA256,
-                    RSASignaturePadding.Pkcs1
-                );
+            // Create certificate request
+            var certificateRequest = new CertificateRequest(
+                subject,
+                rsaKey,
+                HashAlgorithmName.SHA256,
+                RSASignaturePadding.Pkcs1
+            );
 
-                certificateRequest.CertificateExtensions.Add(
-                    new X509BasicConstraintsExtension(
-                        certificateAuthority: false,
-                        hasPathLengthConstraint: false,
-                        pathLengthConstraint: 0,
-                        critical: true
-                    )
-                );
+            certificateRequest.CertificateExtensions.Add(
+                new X509BasicConstraintsExtension(
+                    certificateAuthority: false,
+                    hasPathLengthConstraint: false,
+                    pathLengthConstraint: 0,
+                    critical: true
+                )
+            );
 
-                certificateRequest.CertificateExtensions.Add(
-                    new X509KeyUsageExtension(
-                        keyUsages:
-                            X509KeyUsageFlags.DigitalSignature
-                            | X509KeyUsageFlags.KeyEncipherment,
-                        critical: false
-                    )
-                );
+            certificateRequest.CertificateExtensions.Add(
+                new X509KeyUsageExtension(
+                    keyUsages:
+                        X509KeyUsageFlags.DigitalSignature
+                        | X509KeyUsageFlags.KeyEncipherment,
+                    critical: false
+                )
+            );
 
-                certificateRequest.CertificateExtensions.Add(
-                    new X509SubjectKeyIdentifierExtension(
-                        key: certificateRequest.PublicKey,
-                        critical: false
-                    )
-                );
+            certificateRequest.CertificateExtensions.Add(
+                new X509SubjectKeyIdentifierExtension(
+                    key: certificateRequest.PublicKey,
+                    critical: false
+                )
+            );
 
-                var expireAt = DateTimeOffset.Now.AddYears(5);
+            var expireAt = DateTimeOffset.Now.AddYears(5);
 
-                var certificate = certificateRequest.CreateSelfSigned(DateTimeOffset.Now, expireAt);
+            var certificate = certificateRequest.CreateSelfSigned(DateTimeOffset.Now, expireAt);
 
-                // Export certificate with private key
-                var exportableCertificate = new X509Certificate2(
-                    certificate.Export(X509ContentType.Cert),
-                    (string)null,
-                    X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet
-                ).CopyWithPrivateKey(rsaKey);
+            // Create password for certificate protection
+            var passwordForCertificateProtection = new SecureString();
+            foreach (var @char in "p@ssw0rd")
+            {
+                passwordForCertificateProtection.AppendChar(@char);
+            }
 
-                exportableCertificate.FriendlyName = "Test-only Certificate For Client Authorization";
-
-                // Create password for certificate protection
-                var passwordForCertificateProtection = new SecureString();
-                foreach (var @char in "p@ssw0rd")
-                {
-                    passwordForCertificateProtection.AppendChar(@char);
-                }
-
-                // Export certificate to a file.
-                File.WriteAllBytes(
-                    "certificateForClientAuthorization.pfx",
-                    exportableCertificate.Export(
-                        X509ContentType.Pfx,
-                        passwordForCertificateProtection
-                    )
-                );
+            // Inside CreateCertificateForServerAuthentication after creating the self-signed certificate
+            var exportableCertificate = new X509Certificate2(
+                certificate.Export(X509ContentType.Pfx, passwordForCertificateProtection),
+                passwordForCertificateProtection,
+                X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet
+            );
+            exportableCertificate.FriendlyName = "Test-only Certificate For Client Authorization";
+            // Export certificate to a file.
+            File.WriteAllBytes(
+                "certificateForClientAuthorization.pfx",
+                exportableCertificate.Export(
+                    X509ContentType.Pfx,
+                    passwordForCertificateProtection
+                )
+            );
 
             // Test correctness of export
             var loadedCertificate = new X509Certificate2("certificateForClientAuthorization.pfx", passwordForCertificateProtection);
 
-            Console.WriteLine(loadedCertificate.FriendlyName);
+            return exportableCertificate;
+        }
+
+        private static void StoreCertificate(X509Certificate2 certificate, StoreName storeName, StoreLocation storeLocation)
+        {
+            using (var store = new X509Store(storeName, storeLocation))
+            {
+                if (!certificate.HasPrivateKey)
+                {
+                    throw new InvalidOperationException("Certificate must have a private key.");
+                }
+                store.Open(OpenFlags.ReadWrite);
+                store.Add(certificate);
+                store.Close();
+            }
         }
     }
 }

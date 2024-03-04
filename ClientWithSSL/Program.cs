@@ -36,7 +36,7 @@ namespace ClientWithSSL
 
             var client = new HttpClient(handler)
             {
-                BaseAddress = new Uri("https://localhost:44321")
+                BaseAddress = new Uri("https://localhost:44322")
             };
 
             var result = await client.GetAsync("data");

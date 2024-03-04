@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using System;
 using System.Linq;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
@@ -30,6 +31,11 @@ namespace PlayWithSSL
             //    @"certificateForServerAuthorization.pfx",
             //    "p@ssw0rd"
             //);
+            if (!certificate.HasPrivateKey)
+            {
+                Log.Logger.Error("The certificate does not have an associated private key.");
+                throw new InvalidOperationException("Certificate must have a private key.");
+            }
 
             return Host.CreateDefaultBuilder(args)
                 .UseSerilog()
@@ -38,7 +44,7 @@ namespace PlayWithSSL
                     webBuilder
                         .UseKestrel(options =>
                         {
-                            options.Listen(System.Net.IPAddress.Loopback, 44321, listenOptions =>
+                            options.Listen(System.Net.IPAddress.Loopback, 44322, listenOptions =>
                             {
                                 var connectionOptions = new HttpsConnectionAdapterOptions();
                                 connectionOptions.ServerCertificate = certificate;
